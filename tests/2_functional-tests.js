@@ -36,16 +36,36 @@ suite('Functional Tests', function() {
   */
 
   suite('Routing tests', function() {
-
+    let bookId = null;
 
     suite('POST /api/books with title => create book object/expect book object', function() {
       
       test('Test POST /api/books with title', function(done) {
-        //done();
+        const reqBody = { title: 'The little prince' };
+
+        chai.request(server)
+          .post('/api/books')
+          .send(reqBody)
+          .end(function(_err, res){
+            assert.equal(res.status, 200);
+            assert.isObject(res.body, 'response should be an object');
+            assert.property(res.body, 'title', 'Book in object should contain title');
+            assert.equal(res.body.title, reqBody.title, 'Book in object should has the same value as the created book')
+            assert.property(res.body, '_id', 'Book in object should contain _id');
+            bookId = res.body._id;
+            done();
+          });
       });
       
       test('Test POST /api/books with no title given', function(done) {
-        //done();
+        chai.request(server)
+          .post('/api/books')
+          .send({})
+          .end(function(_err, res){
+            assert.equal(res.status, 200);
+            assert.equal(res.body, 'missing required field title');
+            done();
+          });
       });
       
     });
@@ -54,7 +74,16 @@ suite('Functional Tests', function() {
     suite('GET /api/books => array of books', function(){
       
       test('Test GET /api/books',  function(done){
-        //done();
+        chai.request(server)
+          .get('/api/books')
+          .end(function(_err, res){
+            assert.equal(res.status, 200);
+            assert.isArray(res.body, 'response should be an array');
+            assert.property(res.body[0], 'commentcount', 'Books in array should contain commentcount');
+            assert.property(res.body[0], 'title', 'Books in array should contain title');
+            assert.property(res.body[0], '_id', 'Books in array should contain _id');
+            done();
+          })
       });      
       
     });
@@ -63,12 +92,28 @@ suite('Functional Tests', function() {
     suite('GET /api/books/[id] => book object with [id]', function(){
       
       test('Test GET /api/books/[id] with id not in db',  function(done){
-        //done();
-      });
-      
+        const invalidBookId = 'invalidId';
+
+        chai.request(server)
+          .get(`/api/books/${invalidBookId}`)
+          .end(function(_err, res){
+            assert.equal(res.status, 200);
+            assert.equal(res.body, 'no book exists');
+            done();
+          });
+      })
+
       test('Test GET /api/books/[id] with valid id in db',  function(done){
-        //done();
-      });
+        chai.request(server)
+          .get(`/api/books/${bookId}`)
+          .end(function(_err, res){
+            assert.equal(res.status, 200);
+            assert.isObject(res.body, 'response should be an object');
+            assert.property(res.body, 'title', 'Book in object should contain title');
+            assert.property(res.body, '_id', 'Book in object should contain _id');
+            done();
+          });
+      })
       
     });
 
@@ -76,15 +121,45 @@ suite('Functional Tests', function() {
     suite('POST /api/books/[id] => add comment/expect book object with id', function(){
       
       test('Test POST /api/books/[id] with comment', function(done){
-        //done();
+        const reqBody = { comment: 'a comment' };
+
+        chai.request(server)
+          .post(`/api/books/${bookId}`)
+          .send(reqBody)
+          .end(function (_err, res) {
+            assert.equal(res.status, 200);
+            assert.isObject(res.body, 'response should be an object');
+            assert.property(res.body, 'commentcount', 'Book in object should contain commentcount');
+            assert.property(res.body, 'title', 'Book in object should contain title');
+            assert.isArray(res.body.comments, 'comments should be an array');
+            assert.include(res.body.comments, reqBody.comment, 'comments should contain the value already created');
+            assert.equal(res.body._id, bookId, 'Book in object should contain the same _id as the bookId in params');
+            done();
+          })
       });
 
       test('Test POST /api/books/[id] without comment field', function(done){
-        //done();
+        chai.request(server)
+          .post(`/api/books/${bookId}`)
+          .send({})
+          .end(function (_err, res) {
+            assert.equal(res.status, 200);
+            assert.equal(res.body, 'missing required field comment');
+            done();
+          })
       });
 
       test('Test POST /api/books/[id] with comment, id not in db', function(done){
-        //done();
+        const invalidBookId = 'invalidId';
+
+        chai.request(server)
+          .post(`/api/books/${invalidBookId}`)
+          .send({ comment: 'a comment' })
+          .end(function (_err, res) {
+            assert.equal(res.status, 200);
+            assert.equal(res.body, 'no book exists');
+            done();
+          })
       });
       
     });
@@ -92,11 +167,25 @@ suite('Functional Tests', function() {
     suite('DELETE /api/books/[id] => delete book object id', function() {
 
       test('Test DELETE /api/books/[id] with valid id in db', function(done){
-        //done();
+        chai.request(server)
+          .delete(`/api/books/${bookId}`)
+          .end(function (_err, res) {
+            assert.equal(res.status, 200);
+            assert.equal(res.body, 'delete successful');
+            done();
+          })
       });
 
       test('Test DELETE /api/books/[id] with  id not in db', function(done){
-        //done();
+        const invalidBookId = 'invalidId';
+
+        chai.request(server)
+          .delete(`/api/books/${invalidBookId}`)
+          .end(function (_err, res) {
+            assert.equal(res.status, 200);
+            assert.equal(res.body, 'no book exists');
+            done();
+          })
       });
 
     });
